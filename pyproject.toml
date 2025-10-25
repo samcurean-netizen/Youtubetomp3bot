@@ -1,11 +1,14 @@
 [project]
-name = "python-template"
+name = "youtube-mp3-telegram-bot"
 version = "0.1.0"
-description = ""
+description = "A Telegram bot that converts YouTube videos to MP3"
 authors = ["Your Name <you@example.com>"]
 requires-python = ">=3.11"
 dependencies = [
     "python-telegram-bot>=20.0",
-    "yt-dlp",
-    "flask",
+    "yt-dlp>=2023.0.0",
+    "flask>=3.0.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.25.0",
+    "openai>=1.0.0",
 ]
