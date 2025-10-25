@@ -4,30 +4,15 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import yt_dlp
 
-from flask import Flask
-from threading import Thread
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot is running!"
-
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
+import config
+from keep_alive import keep_alive
 
 # Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=getattr(logging, config.LOG_LEVEL.upper(), logging.INFO)
+)
 logger = logging.getLogger(__name__)
-
-# Get bot token from secrets
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN not found in environment variables!")
 
 async def start(update: Update, context: CallbackContext):
     """Send a message when the command /start is issued."""
@@ -70,8 +55,10 @@ async def download_audio(update: Update, context: CallbackContext):
         with open(mp3_file, 'rb') as audio:
             await update.message.reply_audio(audio=audio)
         
-        # Delete the file to save space
-        os.remove(mp3_file)
+        # Delete the file to save space (configurable via DELETE_FILES_AFTER_SEND)
+        if config.DELETE_FILES_AFTER_SEND:
+            os.remove(mp3_file)
+            logger.info(f"Deleted file: {mp3_file}")
         
     except Exception as e:
         logger.error(f"Error: {e}")
@@ -80,13 +67,14 @@ async def download_audio(update: Update, context: CallbackContext):
 def main():
     """Start the bot."""
     # Create the Application
-    application = Application.builder().token(BOT_TOKEN).build()
+    application = Application.builder().token(config.BOT_TOKEN).build()
     
     # Add handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_audio))
     
     # Start the bot
+    logger.info("Starting bot...")
     application.run_polling()
 
 if __name__ == '__main__':
