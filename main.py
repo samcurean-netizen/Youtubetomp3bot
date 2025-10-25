@@ -6,6 +6,7 @@ import yt_dlp
 
 from flask import Flask
 from threading import Thread
+from config import get_bot_token
 
 app = Flask('')
 
@@ -24,10 +25,8 @@ def keep_alive():
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Get bot token from secrets
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN not found in environment variables!")
+# Get bot token from config
+BOT_TOKEN = get_bot_token()
 
 async def start(update: Update, context: CallbackContext):
     """Send a message when the command /start is issued."""
