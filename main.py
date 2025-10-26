@@ -8,6 +8,7 @@ from flask import Flask
 from threading import Thread
 
 import database
+import transcription
 
 app = Flask('')
 
@@ -63,7 +64,10 @@ async def start(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     
     await update.message.reply_text(
-        'Hi! Send me a YouTube link and I\'ll convert it to MP3 for you! 🎵'
+        'Hi! I can help you with:\n'
+        '🎵 Send me a YouTube link and I\'ll convert it to MP3\n'
+        '🎤 Send me a voice message or audio file and I\'ll transcribe it\n\n'
+        'All transcription happens locally on the server - no external APIs needed!'
     )
     
     admin_prompted = await database.get_admin_prompted(chat_id)
@@ -185,6 +189,65 @@ async def handle_text_message(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text('Please send a valid YouTube link!')
 
+async def handle_audio_message(update: Update, context: CallbackContext):
+    """Handle audio files and voice messages for transcription."""
+    chat_id = update.effective_chat.id
+    message_id = update.message.message_id
+    
+    if await database.is_message_processed(chat_id, message_id):
+        logger.debug(f"Message {message_id} already processed, skipping")
+        return
+    
+    audio_file = update.message.audio or update.message.voice
+    if not audio_file:
+        return
+    
+    if update.message.audio and await database.is_audio_processed(audio_file.file_id):
+        logger.debug(f"Audio {audio_file.file_id} already processed, skipping")
+        return
+    
+    await update.message.reply_text('Transcribing audio... ⏳')
+    
+    temp_file_path = None
+    try:
+        file = await context.bot.get_file(audio_file.file_id)
+        file_extension = '.ogg' if update.message.voice else '.mp3'
+        temp_file_path = f"temp_audio_{audio_file.file_id}{file_extension}"
+        
+        await file.download_to_drive(temp_file_path)
+        
+        result = await transcription.transcribe_audio_safe(temp_file_path)
+        
+        if result and result.text:
+            transcribed_text = result.text
+            language = result.metadata.get('language', 'unknown')
+            await update.message.reply_text(
+                f"📝 Transcription ({language}):\n\n{transcribed_text}"
+            )
+            
+            await database.mark_message_processed(chat_id, message_id)
+            
+            if update.message.audio:
+                await database.mark_audio_processed(audio_file.file_id)
+            
+            logger.info(f"Transcription completed for message {message_id} in chat {chat_id}")
+        else:
+            await update.message.reply_text(
+                'Sorry, I could not transcribe the audio. Please try again or check if the audio is clear.'
+            )
+        
+        delete_after = await database.get_delete_after_transcription(chat_id)
+        if delete_after and temp_file_path and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+            logger.info(f"Deleted audio file for chat {chat_id} per settings")
+        
+    except Exception as e:
+        logger.error(f"Error transcribing audio: {e}", exc_info=True)
+        await update.message.reply_text(f'Sorry, an error occurred during transcription: {str(e)}')
+        
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
 async def process_startup_history(application: Application):
     logger.info("Processing startup history for unprocessed messages...")
     
@@ -212,6 +275,7 @@ def main():
     # Add handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(handle_deletion_callback, pattern="^delete_"))
+    application.add_handler(MessageHandler(filters.AUDIO | filters.VOICE, handle_audio_message))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
     
     # Start the bot
