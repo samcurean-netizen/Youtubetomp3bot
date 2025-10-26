@@ -164,3 +164,10 @@ bot_data.db
 *.mp3
 *.mp4
 *.webm
+*.ogg
+*.oga
+temp_audio_*
+
+# Whisper model cache
+.cache/
+whisper/
