@@ -1,0 +1,65 @@
+# Example Pipedream Workflow Configuration
+# This is a conceptual example - Pipedream uses its own internal format
+# Use this as a reference when creating your workflow in the Pipedream UI
+
+name: telegram-bot-webhook
+version: 0.0.1
+description: Telegram bot for YouTube downloads and audio transcription
+
+# Step 1: HTTP Trigger (Webhook)
+trigger:
+  type: http
+  name: webhook
+  description: Receives POST requests from Telegram
+  config:
+    http_method: POST
+    path: /
+    allowed_origins:
+      - https://api.telegram.org
+
+# Step 2: Python Code - Process Telegram Update
+steps:
+  - name: process_telegram_update
+    type: code
+    language: python
+    description: Processes the Telegram webhook update
+    
+    # Dependencies - specify these in Pipedream UI
+    requirements:
+      - python-telegram-bot>=20.0
+      - yt-dlp>=2023.0.0
+      - faster-whisper>=1.0.0
+    
+    # Environment variables - set these in Pipedream UI
+    env:
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+    
+    # Code - paste from pipedream_handler.py
+    code: |
+      # Copy the entire content of pipedream_handler.py here
+      # Or use the Pipedream UI to paste it directly
+      
+      async def run(pd: "pipedream"):
+          """Main entry point for Pipedream"""
+          from pipedream_handler import handler
+          return await handler(pd)
+
+# Optional: Add logging/monitoring steps
+  - name: log_result
+    type: code
+    language: javascript
+    code: |
+      export default defineComponent({
+        async run({ steps, $ }) {
+          console.log("Webhook processed:", steps.process_telegram_update.$return_value);
+          return steps.process_telegram_update.$return_value;
+        }
+      })
+
+# Configuration notes:
+# 1. Create workflow at https://pipedream.com/workflows
+# 2. Add HTTP/Webhook trigger as first step
+# 3. Add Python code step and paste pipedream_handler.py
+# 4. Set BOT_TOKEN in environment variables
+# 5. Deploy and copy webhook URL
+# 6. Set webhook with Telegram using setup_webhook.sh script
