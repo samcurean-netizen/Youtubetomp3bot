@@ -1,0 +1,6 @@
+# Pipedream Requirements
+# Add these packages in your Pipedream workflow's Python step dependencies
+
+python-telegram-bot>=20.0
+yt-dlp>=2023.0.0
+faster-whisper>=1.0.0

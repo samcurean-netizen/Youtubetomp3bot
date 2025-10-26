@@ -10,6 +10,29 @@ A powerful Telegram bot that handles YouTube audio downloads and local speech-to
 - 👥 **Group Support**: Works in private chats and groups with admin controls
 - 🔒 **Privacy First**: All transcription happens locally - no external APIs needed
 - 📊 **Database Tracking**: Prevents duplicate processing of messages and audio files
+- ☁️ **Flexible Deployment**: Run with polling (VPS) or webhooks (Pipedream, serverless)
+
+## Deployment Options
+
+This bot supports two deployment modes:
+
+1. **Polling Mode** (Traditional) - `main.py`
+   - Continuously runs on a server (VPS, Replit, etc.)
+   - Uses long polling to fetch updates from Telegram
+   - Includes Flask keep-alive server
+   - Best for: VPS, dedicated servers, always-on platforms
+
+2. **Webhook Mode** (Serverless) - `pipedream_handler.py`
+   - Event-driven, runs only when triggered
+   - Works on serverless platforms like Pipedream
+   - No keep-alive server needed
+   - Best for: Serverless deployments, lower costs, scalability
+   
+   📚 **Quick Links:**
+   - [5-Minute Pipedream Setup](QUICKSTART_PIPEDREAM.md)
+   - [Full Deployment Guide](PIPEDREAM_DEPLOYMENT.md)
+   - [Polling vs Webhook Comparison](POLLING_VS_WEBHOOK.md)
+   - [Architecture Overview](ARCHITECTURE.md)
 
 ## Requirements
 
@@ -160,12 +183,14 @@ Model comparison:
 
 ```
 .
-├── main.py              # Main bot application
-├── database.py          # Database operations
-├── transcription.py     # Audio transcription module
-├── pyproject.toml       # Project dependencies
-├── README.md           # This file
-└── bot_data.db         # SQLite database (created at runtime)
+├── main.py                      # Main bot application (polling mode)
+├── pipedream_handler.py         # Webhook handler for Pipedream
+├── database.py                  # Database operations
+├── transcription.py             # Audio transcription module
+├── pyproject.toml               # Project dependencies
+├── PIPEDREAM_DEPLOYMENT.md      # Webhook deployment guide
+├── setup_webhook.sh             # Webhook setup script
+└── bot_data.db                  # SQLite database (created at runtime)
 ```
 
 ### Running in Development
@@ -183,15 +208,36 @@ Send test messages to your bot:
 
 ## Deployment
 
-### Replit/Cloud Platforms
+### Option 1: Pipedream (Webhook Mode) - Recommended for Serverless ☁️
+
+Deploy on Pipedream for free serverless hosting with automatic scaling:
+
+1. Create a Pipedream workflow with HTTP trigger
+2. Copy code from `pipedream_handler.py` into a Python step
+3. Set `BOT_TOKEN` in environment variables
+4. Deploy and copy the webhook URL
+5. Run the setup script:
+   ```bash
+   ./setup_webhook.sh
+   ```
+
+**Advantages:**
+- Free tier with generous limits
+- Automatic scaling
+- No server maintenance
+- Pay only for what you use
+
+📚 **[Full Pipedream Deployment Guide](PIPEDREAM_DEPLOYMENT.md)**
+
+### Option 2: Replit/Cloud Platforms (Polling Mode)
 
 1. Fork the repository to your platform
 2. Set the `BOT_TOKEN` secret/environment variable
-3. Run the bot
+3. Run the bot with `python main.py`
 
 The Flask keep-alive server will help prevent the bot from sleeping on free tiers.
 
-### VPS/Dedicated Server
+### Option 3: VPS/Dedicated Server (Polling Mode)
 
 1. Clone the repository
 2. Set up a systemd service or use screen/tmux
@@ -246,9 +292,24 @@ Install FFmpeg for your platform (see Installation section).
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## Documentation
+
+### 📚 Complete Documentation Index
+
+- **[DOCS_INDEX.md](DOCS_INDEX.md)** - Complete documentation index and navigation guide
+
+### Quick Links
+
+- **[5-Minute Quick Start](QUICKSTART_PIPEDREAM.md)** - Get bot running on Pipedream in 5 minutes
+- **[Full Pipedream Guide](PIPEDREAM_DEPLOYMENT.md)** - Comprehensive webhook deployment guide
+- **[Polling vs Webhook](POLLING_VS_WEBHOOK.md)** - Comparison and decision guide
+- **[Architecture](ARCHITECTURE.md)** - System design and technical details
+- **[Setup Summary](WEBHOOK_SETUP_SUMMARY.md)** - Implementation overview and checklist
+
 ## Acknowledgments
 
 - [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot) - Telegram Bot API wrapper
 - [faster-whisper](https://github.com/guillaumekln/faster-whisper) - Fast Whisper implementation
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) - YouTube downloader
 - [OpenAI Whisper](https://github.com/openai/whisper) - Original Whisper model
+- [Pipedream](https://pipedream.com) - Serverless platform for webhook deployment
