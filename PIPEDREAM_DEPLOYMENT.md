@@ -1,365 +1,1398 @@
-# Pipedream Deployment Guide
+# Complete Pipedream Deployment Guide
 
-This guide explains how to deploy the Telegram bot to Pipedream using webhooks.
+This comprehensive guide will walk you through deploying your Telegram bot to Pipedream with webhooks, step by step. **No prior Pipedream or serverless experience required!**
 
-## Overview
+---
 
-The webhook-based architecture works as follows:
-1. Telegram sends a POST request to your Pipedream endpoint when a user interacts with the bot
-2. Pipedream triggers your workflow with the update data
-3. Your Python code processes the request (download YouTube audio, transcribe, etc.)
-4. Response is sent back to the user via Telegram Bot API
+## 📋 Table of Contents
+
+1. [What is Pipedream?](#what-is-pipedream)
+2. [How Webhooks Work](#how-webhooks-work)
+3. [Prerequisites](#prerequisites)
+4. [Step 1: Get Your Telegram Bot Token](#step-1-get-your-telegram-bot-token)
+5. [Step 2: Create a Pipedream Account](#step-2-create-a-pipedream-account)
+6. [Step 3: Create a New Workflow](#step-3-create-a-new-workflow)
+7. [Step 4: Add Your Python Code](#step-4-add-your-python-code)
+8. [Step 5: Configure Environment Variables](#step-5-configure-environment-variables)
+9. [Step 6: Deploy Your Workflow](#step-6-deploy-your-workflow)
+10. [Step 7: Get Your Webhook URL](#step-7-get-your-webhook-url)
+11. [Step 8: Register Webhook with Telegram](#step-8-register-webhook-with-telegram)
+12. [Step 9: Test Your Bot](#step-9-test-your-bot)
+13. [Viewing Logs and Monitoring](#viewing-logs-and-monitoring)
+14. [Troubleshooting](#troubleshooting)
+15. [Maintenance and Updates](#maintenance-and-updates)
+16. [Cost and Usage](#cost-and-usage)
+17. [Advanced Configuration](#advanced-configuration)
+
+---
+
+## What is Pipedream?
+
+**Pipedream** is a serverless platform that lets you run code in response to events (like HTTP requests) without managing servers. Think of it as a service that:
+- Runs your code only when needed (when someone messages your bot)
+- Handles scaling automatically
+- Provides free hosting for moderate usage
+- Shows real-time logs of every execution
+
+**Why use Pipedream for your Telegram bot?**
+- ✅ No server maintenance
+- ✅ Automatic scaling
+- ✅ Free tier (100,000 credits/month)
+- ✅ Easy deployment
+- ✅ Built-in monitoring and logs
+
+---
+
+## How Webhooks Work
+
+Traditional bots use **polling** (constantly asking Telegram "got any new messages?"). With **webhooks**:
+
+1. You give Telegram a URL (your Pipedream webhook)
+2. When someone messages your bot, Telegram immediately sends a POST request to that URL
+3. Pipedream receives it and runs your code
+4. Your code processes the message and responds
+5. Done! No continuous running needed.
+
+**Benefits:**
+- Lower resource usage (only runs when needed)
+- Faster response times
+- Better for serverless platforms
+
+---
 
 ## Prerequisites
 
-- [Pipedream account](https://pipedream.com) (free tier is sufficient for moderate use)
-- Telegram Bot Token (from [@BotFather](https://t.me/botfather))
-- Basic understanding of webhooks
+Before you begin, make sure you have:
 
-## Deployment Methods
+- ✅ A computer with internet access
+- ✅ A web browser (Chrome, Firefox, Safari, etc.)
+- ✅ A Telegram account
+- ✅ 20-30 minutes of time
 
-### Method 1: Using Pipedream's Web UI (Recommended for beginners)
+**That's it!** No coding experience, servers, or payment required.
 
-1. **Create a new workflow in Pipedream:**
-   - Go to https://pipedream.com/workflows
-   - Click "New Workflow"
-   - Select "HTTP / Webhook" as the trigger
-   - Choose "HTTP Requests" → "New Requests"
+---
 
-2. **Add Python code step:**
-   - Click the "+" button to add a new step
-   - Search for "Python" and select "Run Python Code"
-   - Copy the entire contents of `pipedream_webhook.py` into the code editor
-   - Make sure to update the handler function at the bottom
+## Step 1: Get Your Telegram Bot Token
 
-3. **Configure environment variables:**
-   - In your workflow, click on "Settings" (gear icon)
-   - Go to "Environment Variables"
-   - Add: `BOT_TOKEN` = `your-telegram-bot-token`
+### What is a Bot Token?
+A bot token is like a password that lets your code control your Telegram bot. It's a long string like: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`
 
-4. **Deploy the workflow:**
-   - Click "Deploy" in the top right
-   - Copy the webhook URL (it looks like: `https://eo123abc.m.pipedream.net`)
+### How to Get Your Token
 
-5. **Set the webhook URL with Telegram:**
-   ```bash
-   curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=<YOUR_PIPEDREAM_URL>"
-   ```
-   
-   Or visit this URL in your browser:
-   ```
-   https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=<YOUR_PIPEDREAM_URL>
-   ```
+**1. Open Telegram** on your phone or computer
 
-6. **Verify webhook is set:**
-   ```bash
-   curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
-   ```
+**2. Search for "@BotFather"**
+   - In the Telegram search bar, type: `@BotFather`
+   - Select the official BotFather (it has a blue verified checkmark)
 
-### Method 2: Using Pipedream CLI (For advanced users)
+**3. Start a conversation**
+   - Click "Start" or send `/start`
 
-1. **Install Pipedream CLI:**
-   ```bash
-   npm install -g @pipedream/cli
-   ```
+**4. Create a new bot**
+   - Send the command: `/newbot`
+   - BotFather will ask you for a name
 
-2. **Login to Pipedream:**
-   ```bash
-   pd login
-   ```
+**5. Choose a name for your bot**
+   - Example: "My Audio Bot"
+   - This is the display name users will see
+   - Send your chosen name
 
-3. **Create a new workflow:**
-   ```bash
-   pd init telegram-bot-webhook
-   cd telegram-bot-webhook
-   ```
+**6. Choose a username**
+   - Must end in "bot" (e.g., `my_audio_bot` or `MyAudioBot`)
+   - Must be unique (not taken by another bot)
+   - Example: `my_audio_helper_bot`
+   - Send your chosen username
 
-4. **Copy the workflow files:**
-   - Copy `pipedream_webhook.py` to your workflow directory
+**7. Copy your token**
+   - BotFather will reply with a message containing your token
+   - It looks like: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`
+   - **IMPORTANT**: Copy this entire token and save it somewhere safe
+   - **Never share this token publicly** - it controls your bot!
 
-5. **Deploy:**
-   ```bash
-   pd deploy
-   ```
+**Optional: Customize your bot**
+- `/setdescription` - Set a description users see before starting
+- `/setabouttext` - Set an about text
+- `/setuserpic` - Upload a profile picture
 
-6. **Set environment secrets:**
-   ```bash
-   pd set env BOT_TOKEN=your-telegram-bot-token
-   ```
+**Example conversation:**
+```
+You: /newbot
+BotFather: Alright, a new bot. How are we going to call it? Please choose a name for your bot.
 
-7. **Set webhook with Telegram** (same as Method 1, step 5)
+You: My Audio Bot
+BotFather: Good. Now let's choose a username for your bot. It must end in `bot`. Like this, for example: TetrisBot or tetris_bot.
 
-## Pipedream Workflow Structure
+You: my_audio_helper_bot
+BotFather: Done! Congratulations on your new bot. You will find it at t.me/my_audio_helper_bot. You can now add a description...
 
-### Simplified Workflow (pipedream_workflow.yaml)
+Use this token to access the HTTP API:
+123456789:ABCdefGHIjklMNOpqrsTUVwxyz
 
-```yaml
-name: Telegram Bot Webhook Handler
-version: 0.0.1
-
-# Trigger on HTTP requests
-trigger:
-  type: http
-  path: /
-
-# Python code step
-steps:
-  - name: process_telegram_update
-    language: python
-    code: |
-      # Your Python code from pipedream_webhook.py
-    requirements:
-      - python-telegram-bot>=20.0
-      - yt-dlp
-      - faster-whisper>=1.0.0
+For a description of the Bot API, see this page: https://core.telegram.org/bots/api
 ```
 
-## Configuration
+✅ **You now have your bot token! Keep it safe for Step 5.**
 
-### Environment Variables
+---
 
-Set these in Pipedream's workflow settings:
+## Step 2: Create a Pipedream Account
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `BOT_TOKEN` | Yes | Your Telegram bot token from BotFather |
+**1. Go to Pipedream**
+   - Open your browser
+   - Visit: https://pipedream.com/auth/signup
 
-### Dependencies
+**2. Sign up**
+   - You can sign up with:
+     - GitHub account (recommended)
+     - Google account
+     - Email address
+   - Click your preferred signup method
 
-The following Python packages are required:
-- `python-telegram-bot>=20.0`
-- `yt-dlp`
-- `faster-whisper>=1.0.0`
+**3. Complete signup**
+   - If using GitHub/Google: Authorize the connection
+   - If using email: Check your email for verification link
 
-These are automatically installed by Pipedream when specified in the workflow.
+**4. Verify your account**
+   - Follow the verification steps if prompted
 
-### FFmpeg
+**5. Welcome to Pipedream!**
+   - You'll see the Pipedream dashboard
+   - Don't worry if it looks unfamiliar - we'll walk through it
 
-FFmpeg is required for audio processing (MP3 conversion). 
+✅ **You now have a Pipedream account!**
 
-**Option 1: Use Pipedream's Built-in FFmpeg** (if available)
-- Pipedream's Python environments may have FFmpeg pre-installed
+**Note:** The free tier gives you 100,000 credits/month, which is plenty for a personal bot handling hundreds of messages daily.
 
-**Option 2: Use Docker-based Workflow**
-- Create a Docker-based Pipedream workflow with FFmpeg installed
-- Use the following Dockerfile:
+---
 
-```dockerfile
-FROM python:3.11-slim
+## Step 3: Create a New Workflow
 
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+### What is a Workflow?
+A workflow is like a container for your bot code. It includes:
+- A trigger (what starts the code - in our case, HTTP requests from Telegram)
+- Steps (the actual code that processes messages)
+- Configuration (environment variables like your bot token)
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+### Creating the Workflow
 
-COPY pipedream_webhook.py .
-```
+**1. Navigate to Workflows**
+   - From the Pipedream homepage, click "Workflows" in the left sidebar
+   - Or go directly to: https://pipedream.com/workflows
 
-**Option 3: Use static FFmpeg binary**
-- Download a static FFmpeg binary and include it in your workflow
-- Update the PATH to include the binary
+**2. Create a New Workflow**
+   - Click the green **"New Workflow"** button (top right)
+   - A dialog will appear asking you to select a trigger
 
-## Limitations and Considerations
+**3. Select HTTP Trigger**
+   - In the search box, type: "HTTP"
+   - You'll see several options
+   - Click on **"HTTP / Webhook"**
+   - Then select **"HTTP Requests"** (usually the first option)
+   - Click **"Save and continue"** or similar button
 
-### 1. Execution Time Limits
-- Pipedream has execution time limits (typically 30-60 seconds for free tier)
-- Long audio transcriptions or large YouTube videos may timeout
-- Consider implementing a queuing system for long-running tasks
+**4. Configure the Trigger**
+   - You'll see the trigger step added to your workflow
+   - Default settings are fine - you don't need to change anything
+   - The trigger will automatically accept POST requests (what Telegram sends)
 
-### 2. Cold Starts
-- First request after inactivity may be slower
-- faster-whisper model needs to be loaded (~150MB)
-- Consider using smaller models (tiny/base) for faster cold starts
+**5. Name Your Workflow (Optional)**
+   - At the top, you'll see "Untitled Workflow"
+   - Click it to rename (e.g., "Telegram Audio Bot")
+   - Or leave it as is - the name doesn't affect functionality
 
-### 3. Temporary Storage
-- Files are stored in `/tmp` which is cleared between invocations
-- Maximum storage: typically 512MB-10GB depending on plan
-- All files must be cleaned up after processing
+✅ **Your workflow now has an HTTP trigger that can receive webhook calls!**
 
-### 4. Database Persistence
-- SQLite database won't persist between invocations
-- Consider using:
-  - Pipedream Data Stores (simple key-value store)
-  - External database (PostgreSQL, MongoDB, etc.)
-  - For simple cases, you can skip persistence
+**What you should see:**
+- A workflow page with one step: "trigger" (HTTP / Webhook)
+- The trigger shows a URL (we'll use this later)
+- A "+" button below the trigger to add more steps
 
-### 5. Concurrent Requests
-- Pipedream handles concurrent requests automatically
-- Each request runs in isolation
-- Be mindful of rate limits on Telegram API
+---
 
-## Testing
+## Step 4: Add Your Python Code
 
-### 1. Test the webhook endpoint
+### Which File to Use?
+In the repository, you'll find a file called **`pipedream_handler.py`** - this is the complete bot code designed for Pipedream.
+
+### Adding the Code Step
+
+**1. Add a Code Step**
+   - Below the trigger, click the **"+" button**
+   - A menu appears with step options
+   - Search for: "Python"
+   - Select **"Run Python Code"**
+   - Click to add it
+
+**2. Open the Code Editor**
+   - A new step appears called something like "run_python_code"
+   - Click on this step to expand it
+   - You'll see a code editor with some default Python code
+
+**3. Get the Bot Code**
+   - Open the repository where you downloaded/cloned this bot
+   - Find the file: **`pipedream_handler.py`**
+   - Open it in a text editor
+   - Select all the contents (Ctrl+A or Cmd+A)
+   - Copy it (Ctrl+C or Cmd+C)
+
+**4. Paste the Code**
+   - Go back to Pipedream
+   - In the code editor, select all the default code (Ctrl+A or Cmd+A)
+   - Delete it
+   - Paste your copied code (Ctrl+V or Cmd+V)
+   - The editor should now show the complete bot code
+
+**5. Add Python Dependencies**
+   - Scroll down in the code step
+   - Look for a section called **"Packages"** or **"Python Packages"** or **"Add package"**
+   - You need to add three packages. Click "Add package" for each:
+     1. Type: `python-telegram-bot` → Select it (version 20.0 or higher)
+     2. Click "Add package" again, type: `yt-dlp` → Select it
+     3. Click "Add package" again, type: `faster-whisper` → Select it
+
+**6. Verify**
+   - Make sure all three packages show up in the packages list
+   - The code editor should show your pasted code
+
+✅ **Your bot code is now in Pipedream!**
+
+**Troubleshooting:**
+- If you can't find "Run Python Code", make sure you're clicking the "+" button below the trigger
+- If packages don't autocomplete, you can type the exact name and version: `python-telegram-bot>=20.0`
+
+---
+
+## Step 5: Configure Environment Variables
+
+### What are Environment Variables?
+Environment variables are a secure way to store sensitive information (like your bot token) without putting it directly in the code.
+
+### Adding Your Bot Token
+
+**1. Open Settings**
+   - Look at the top-right corner of your workflow page
+   - You'll see several icons
+   - Click the **gear/cog icon** (⚙️) - this is "Settings"
+
+**2. Find Environment Variables**
+   - In the settings panel that opens on the right
+   - Look for a section called **"Environment Variables"** or **"Environment"**
+   - Click on it to expand if needed
+
+**3. Add New Variable**
+   - Click **"Add environment variable"** or similar button
+   - You'll see two fields: Name and Value
+
+**4. Enter Your Bot Token**
+   - **Name field**: Type exactly `BOT_TOKEN` (all caps, with underscore)
+   - **Value field**: Paste your Telegram bot token (from Step 1)
+   - Example value: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`
+
+**5. Save the Variable**
+   - Click **"Save"** or **"Add"** button
+   - The variable should now appear in your list
+
+**6. Close Settings**
+   - Click outside the settings panel or click the X to close it
+   - Your environment variable is now configured
+
+✅ **Your bot token is securely stored!**
+
+**Security Notes:**
+- Never commit your bot token to GitHub or share it publicly
+- Pipedream encrypts environment variables
+- If your token is ever leaked, use BotFather's `/revoke` command to get a new one
+
+**Common Mistakes:**
+- ❌ `bot_token` (lowercase) - Won't work! Must be `BOT_TOKEN`
+- ❌ `BOT TOKEN` (with space) - Won't work! Must use underscore: `BOT_TOKEN`
+- ❌ Including quotes around the token - Just paste the token itself, no quotes
+
+---
+
+## Step 6: Deploy Your Workflow
+
+### What Does Deploying Mean?
+Deploying activates your workflow so it can receive real requests. Before deployment, the workflow is in "draft" mode.
+
+### How to Deploy
+
+**1. Find the Deploy Button**
+   - Look at the top-right corner of the workflow page
+   - You'll see a button that says **"Deploy"**
+   - It might be blue or green
+
+**2. Click Deploy**
+   - Click the **"Deploy"** button
+   - Pipedream will start deploying your workflow
+   - You'll see a progress indicator or loading animation
+
+**3. Wait for Deployment**
+   - This usually takes 10-30 seconds
+   - Pipedream is:
+     - Installing the Python packages you specified
+     - Setting up the environment
+     - Making your workflow live
+
+**4. Deployment Complete**
+   - You'll see a success message or checkmark
+   - The "Deploy" button might change to show it's live
+   - A green dot or "Active" status appears
+
+✅ **Your workflow is now live and ready to receive webhooks!**
+
+**What if deployment fails?**
+- Check if all three Python packages were added correctly
+- Verify that the code was pasted completely
+- Look for any error messages - they usually indicate what's wrong
+- Most common issue: package names misspelled
+
+---
+
+## Step 7: Get Your Webhook URL
+
+### What is the Webhook URL?
+This is the public URL that Telegram will use to send messages to your bot. Every Pipedream workflow gets a unique URL.
+
+### Finding Your URL
+
+**1. Locate the Trigger Step**
+   - Scroll to the top of your workflow
+   - Find the first step (the HTTP / Webhook trigger)
+   - Click on it to expand if it's collapsed
+
+**2. Find the URL**
+   - In the trigger step, look for a section that says:
+     - "Webhook URL" or
+     - "Endpoint URL" or
+     - Just "URL"
+   - You'll see a URL that looks like: `https://eo123abc.m.pipedream.net`
+   - The exact subdomain (eo123abc) will be different for you
+
+**3. Copy the URL**
+   - Click the copy icon next to the URL, or
+   - Select the entire URL and copy it (Ctrl+C or Cmd+C)
+   - The URL should be in your clipboard now
+
+**4. Save the URL**
+   - Paste it somewhere safe (like a text file or note)
+   - You'll need this URL in the next step
+
+✅ **You have your webhook URL!**
+
+**Example URLs:**
+- `https://eo123abc.m.pipedream.net`
+- `https://en456def.m.pipedream.net`
+- All Pipedream webhook URLs follow this pattern: `https://[random].m.pipedream.net`
+
+**Note:** This URL is public but only processes valid Telegram updates. It's safe to use.
+
+---
+
+## Step 8: Register Webhook with Telegram
+
+### What is Webhook Registration?
+You need to tell Telegram where to send updates for your bot. This is called "setting the webhook."
+
+### Prerequisites
+- Your bot token (from Step 1)
+- Your Pipedream webhook URL (from Step 7)
+
+### Method 1: Using the Setup Script (Easiest)
+
+If you have the repository downloaded on your computer:
+
+**1. Open Terminal/Command Prompt**
+   - **Mac/Linux**: Open Terminal
+   - **Windows**: Open Command Prompt or PowerShell
+
+**2. Navigate to the Repository**
+   ```bash
+   cd /path/to/telegram-audio-bot
+   ```
+
+**3. Run the Setup Script**
+   ```bash
+   ./setup_webhook.sh
+   ```
+
+**4. Enter Your Details**
+   - When prompted, paste your bot token
+   - Press Enter
+   - When prompted, paste your Pipedream webhook URL
+   - Press Enter
+
+**5. Verify Success**
+   - The script will show you the result
+   - You should see: `✅ Webhook set successfully!`
+
+### Method 2: Using cURL (Command Line)
+
+**1. Open Terminal/Command Prompt**
+
+**2. Run This Command** (replace the placeholders):
 ```bash
-curl -X POST https://your-pipedream-url.m.pipedream.net \
-  -H "Content-Type: application/json" \
-  -d '{
-    "update_id": 123456789,
-    "message": {
-      "message_id": 1,
-      "from": {"id": 123, "first_name": "Test"},
-      "chat": {"id": 123, "type": "private"},
-      "text": "/start"
-    }
-  }'
+curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=<YOUR_PIPEDREAM_URL>"
 ```
 
-### 2. Test bot commands
-- Send `/start` to your bot
-- Send a YouTube URL
-- Send a voice message
-- Check Pipedream logs for any errors
+**Example with real values:**
+```bash
+curl "https://api.telegram.org/bot123456789:ABCdefGHIjklMNOpqrsTUVwxyz/setWebhook?url=https://eo123abc.m.pipedream.net"
+```
 
-## Monitoring and Debugging
+**3. Check the Response**
+You should see:
+```json
+{"ok":true,"result":true,"description":"Webhook was set"}
+```
 
-### View Logs
-1. Go to your workflow in Pipedream
-2. Click on "Logs" tab
-3. View real-time execution logs
-4. Check for errors and performance metrics
+### Method 3: Using Your Web Browser (No Command Line Needed!)
 
-### Common Issues
+**1. Build Your URL**
+Take this template:
+```
+https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=<YOUR_PIPEDREAM_URL>
+```
 
-#### Issue: Webhook not receiving updates
-**Solution:**
-- Verify webhook is set correctly: `getWebhookInfo`
-- Check that URL is accessible (test with curl)
-- Ensure no other webhook is set
+**2. Replace the Placeholders**
+- Replace `<YOUR_BOT_TOKEN>` with your actual bot token
+- Replace `<YOUR_PIPEDREAM_URL>` with your actual Pipedream URL
 
-#### Issue: FFmpeg not found
-**Solution:**
-- Use Docker-based workflow with FFmpeg
-- Or use a static FFmpeg binary
-- Check Pipedream documentation for pre-installed packages
+**Example:**
+```
+https://api.telegram.org/bot123456789:ABCdefGHIjklMNOpqrsTUVwxyz/setWebhook?url=https://eo123abc.m.pipedream.net
+```
 
-#### Issue: Timeout on large files
-**Solution:**
-- Reduce `preferredquality` in yt-dlp options
-- Use smaller Whisper model (tiny instead of base)
-- Consider implementing async processing with webhooks
+**3. Paste in Browser**
+- Copy your complete URL
+- Paste it into your browser's address bar
+- Press Enter
 
-#### Issue: Database data not persisting
-**Solution:**
-- Use Pipedream Data Stores:
-  ```python
-  # Store data
-  pd.data_store.set("key", "value")
-  
-  # Retrieve data
-  value = pd.data_store.get("key")
-  ```
+**4. Check the Response**
+Your browser will show a JSON response:
+```json
+{"ok":true,"result":true,"description":"Webhook was set"}
+```
 
-## Cost Considerations
+If `"ok":true` appears, you're successful! ✅
 
-### Pipedream Free Tier
-- 100,000 credits per month
-- Each workflow execution consumes credits based on:
-  - Execution time
-  - Memory usage
-  - Number of steps
+### Verifying the Webhook
 
-### Typical Usage
-- Simple message handling: ~1-2 credits
-- YouTube download: ~10-20 credits
-- Audio transcription: ~20-50 credits (depending on duration)
+To verify your webhook is set correctly:
 
-For moderate usage (few hundred messages/day), free tier is sufficient.
+**Browser method:**
+```
+https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo
+```
 
-## Production Recommendations
+**cURL method:**
+```bash
+curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
+```
 
-1. **Error Handling:**
-   - Implement comprehensive error handling
-   - Return 200 OK even on errors to avoid webhook retries
-   - Log errors to external service (Sentry, etc.)
+**Expected Response:**
+```json
+{
+  "ok": true,
+  "result": {
+    "url": "https://eo123abc.m.pipedream.net",
+    "has_custom_certificate": false,
+    "pending_update_count": 0,
+    "max_connections": 40
+  }
+}
+```
 
-2. **Rate Limiting:**
-   - Implement rate limiting per user
-   - Use Pipedream Data Stores to track usage
+**What to check:**
+- ✅ `"url"` matches your Pipedream URL
+- ✅ `"pending_update_count": 0` (means no queued messages)
+- ✅ No `"last_error_message"` field (would indicate problems)
 
-3. **Security:**
-   - Validate webhook requests (check Telegram secret token)
-   - Sanitize user inputs
-   - Implement access controls
+### Removing Old Webhooks
 
-4. **Monitoring:**
-   - Set up alerts for failures
-   - Monitor execution time and credit usage
-   - Track error rates
+If you previously had a webhook or polling bot:
 
-5. **Scaling:**
-   - Use Pipedream's paid plans for higher limits
-   - Consider queueing for long-running tasks
-   - Implement caching for frequently accessed data
+**1. Delete any existing webhook:**
+```bash
+curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/deleteWebhook"
+```
 
-## Migration from Polling
+Or in browser:
+```
+https://api.telegram.org/bot<YOUR_BOT_TOKEN>/deleteWebhook
+```
 
-If you're migrating from the polling-based version:
+**2. Stop any polling bots:**
+- If you had a bot running with polling, stop it
+- Only one method (webhook OR polling) can be active
 
-1. **Stop the old bot:**
-   - Shut down the polling-based bot
-   - Remove the webhook if one was set previously
+✅ **Your webhook is now registered with Telegram!**
 
-2. **Delete webhook (if any):**
+---
+
+## Step 9: Test Your Bot
+
+Now for the exciting part - testing your bot!
+
+### Basic Tests
+
+**1. Open Telegram**
+   - Open Telegram on your phone or computer
+
+**2. Find Your Bot**
+   - Search for your bot's username (e.g., `@my_audio_helper_bot`)
+   - Or use the link from BotFather (e.g., `t.me/my_audio_helper_bot`)
+   - Click on your bot
+
+**3. Start the Bot**
+   - Click "Start" button or send: `/start`
+   - **Expected response:**
+     ```
+     Hi! I can help you with:
+     🎵 Send me a YouTube link and I'll convert it to MP3
+     🎤 Send me a voice message or audio file and I'll transcribe it
+
+     All transcription happens locally - no external APIs needed!
+     ```
+
+✅ **If you see this message, your bot is working!**
+
+### Test YouTube Download
+
+**1. Find a YouTube video**
+   - Go to YouTube
+   - Pick any video
+   - Copy the URL (e.g., `https://www.youtube.com/watch?v=dQw4w9WgXcQ`)
+
+**2. Send to Your Bot**
+   - Paste the YouTube URL in your chat with the bot
+   - Send it
+
+**3. Watch the Bot Work**
+   - You'll see: `⏳ Downloading...`
+   - Then: `📤 Uploading MP3...`
+   - Finally: The bot sends you an MP3 file!
+
+**Expected time:** 10-60 seconds depending on video length
+
+**Note:** This requires FFmpeg, which may not be available in all Pipedream environments. See [Troubleshooting](#troubleshooting) if this doesn't work.
+
+### Test Audio Transcription
+
+**1. Send a Voice Message**
+   - In your chat with the bot
+   - Hold the microphone button
+   - Record a short message
+   - Release to send
+
+**2. Watch the Bot Transcribe**
+   - You'll see: `⏳ Transcribing audio...`
+   - After a few seconds: The transcribed text appears!
+
+**Example:**
+```
+📝 Transcription (en):
+
+Hello this is a test of the transcription feature. It should convert my speech to text.
+```
+
+**3. Try an Audio File (Optional)**
+   - Send any audio file (.mp3, .m4a, .ogg, etc.)
+   - The bot will transcribe it
+
+✅ **All features are working!**
+
+### What if Something Doesn't Work?
+
+See the [Troubleshooting](#troubleshooting) section below.
+
+---
+
+## Viewing Logs and Monitoring
+
+### Why Check Logs?
+Logs show you exactly what's happening inside your bot - useful for debugging or monitoring usage.
+
+### Accessing Logs
+
+**1. Go to Your Workflow**
+   - Open Pipedream
+   - Navigate to your workflow
+
+**2. Click the Logs Tab**
+   - Near the top, you'll see tabs: "Build", "Logs", "Settings", etc.
+   - Click on **"Logs"** or **"Events"**
+
+**3. View Executions**
+   - You'll see a list of every time your workflow ran
+   - Each entry represents one message to your bot
+   - Click on any entry to see full details
+
+### Understanding Log Entries
+
+**What you'll see:**
+- **Timestamp**: When the request came in
+- **Status**: Success (200) or error
+- **Duration**: How long it took to process
+- **Data**: The full request and response
+
+**Example log entry:**
+```
+✅ 2024-03-15 10:30:45 - Status: 200
+Duration: 2.3s
+Trigger: HTTP Request
+Body: {"update_id": 123456, "message": {...}}
+```
+
+**Click on an entry to see:**
+- Full request body from Telegram
+- Each step's output
+- Console logs (your code's print/log statements)
+- Any errors that occurred
+
+### Real-Time Monitoring
+
+**1. Keep Logs Tab Open**
+   - New executions appear automatically
+   - No need to refresh
+
+**2. Send a Test Message**
+   - Message your bot in Telegram
+   - Watch the log appear in Pipedream in real-time
+   - Click to see full details
+
+**3. Check for Errors**
+   - Red/failed entries indicate errors
+   - Click them to see what went wrong
+   - Usually shows the error message and stack trace
+
+✅ **You can now monitor your bot in real-time!**
+
+### Key Things to Monitor
+
+- **Execution time**: Should be under 30 seconds (free tier limit)
+- **Error rate**: Occasional errors are normal, frequent errors need investigation
+- **Credit usage**: Check your account's credit consumption
+- **Pending updates**: In webhook info, should be 0
+
+---
+
+## Troubleshooting
+
+### Bot Not Responding to Messages
+
+**Symptom:** You send `/start` but nothing happens.
+
+**Checklist:**
+
+1. **Is the webhook set?**
+   ```bash
+   curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
+   ```
+   - ✅ `"url"` should show your Pipedream URL
+   - ❌ If empty, run Step 8 again
+
+2. **Is the workflow deployed?**
+   - Go to your Pipedream workflow
+   - Look for green "Active" or "Deployed" indicator
+   - ❌ If not, click "Deploy"
+
+3. **Is BOT_TOKEN set correctly?**
+   - Workflow → Settings → Environment Variables
+   - Check `BOT_TOKEN` value
+   - Verify no extra spaces or quotes
+   - ❌ Fix and redeploy
+
+4. **Check Pipedream logs:**
+   - Go to Logs tab
+   - Send a test message to your bot
+   - Do you see a new log entry?
+   - ✅ Entry appears: Click it to see error details
+   - ❌ No entry: Webhook isn't reaching Pipedream
+
+5. **Is another bot/webhook active?**
+   - Only one webhook per bot token
+   - Delete old webhook: `deleteWebhook` endpoint
+   - Stop any polling bots
+
+6. **Try re-setting the webhook:**
+   ```bash
+   # Delete old webhook
+   curl "https://api.telegram.org/bot<TOKEN>/deleteWebhook"
+   
+   # Wait 2 seconds
+   
+   # Set new webhook
+   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<PIPEDREAM_URL>"
+   ```
+
+### YouTube Download Failing
+
+**Symptom:** Bot responds to YouTube links with an error.
+
+**Common Causes:**
+
+1. **FFmpeg Not Available**
+   
+   **Symptom:** Error message mentions "ffmpeg not found" or "FFmpeg not installed"
+   
+   **Why:** Pipedream's Python environment may not include FFmpeg
+   
+   **Solutions:**
+   
+   **Option A: Wait for updates** (Easiest)
+   - Pipedream may add FFmpeg support in the future
+   - Check Pipedream's documentation
+   
+   **Option B: Use a Docker-based workflow** (Advanced)
+   - Create a workflow using a custom Docker container
+   - Include FFmpeg in your Dockerfile
+   - Example Dockerfile:
+     ```dockerfile
+     FROM python:3.11-slim
+     
+     RUN apt-get update && apt-get install -y \
+         ffmpeg \
+         && rm -rf /var/lib/apt/lists/*
+     
+     COPY requirements.txt .
+     RUN pip install -r requirements.txt
+     
+     COPY pipedream_handler.py .
+     ```
+   - See [Pipedream Docker workflows documentation](https://pipedream.com/docs/workflows/docker/)
+   
+   **Option C: Use static FFmpeg binary** (Advanced)
+   - Download a static FFmpeg binary for Linux
+   - Include it in your workflow
+   - Update PATH in your code
+   - Not recommended for beginners
+
+2. **Video Too Long**
+   
+   **Symptom:** Timeout error after 30-60 seconds
+   
+   **Why:** Free tier has execution time limits
+   
+   **Solutions:**
+   - Try shorter videos (under 10 minutes)
+   - Upgrade to Pipedream paid plan for longer timeouts
+   - Reduce quality in yt-dlp options:
+     ```python
+     'preferredquality': '128',  # Lower from 192
+     ```
+
+3. **Invalid URL**
+   
+   **Symptom:** "Please send a valid YouTube link"
+   
+   **Solutions:**
+   - Check URL is from youtube.com or youtu.be
+   - Try a different video
+   - Make sure URL is not a playlist or channel
+
+4. **yt-dlp Issues**
+   
+   **Symptom:** Error about video extraction
+   
+   **Solutions:**
+   - Some videos are region-restricted
+   - Some videos are age-restricted
+   - Try a different video
+   - Check if video is still available
+
+### Transcription Not Working
+
+**Symptom:** Voice messages show error or timeout.
+
+**Solutions:**
+
+1. **Model Download Timeout**
+   
+   **First run:** The Whisper model downloads (~150MB for base model)
+   - This can take 30+ seconds
+   - May timeout on free tier
+   - Subsequent runs will be faster (model is cached)
+   
+   **Solution:** Upgrade to paid plan or use smaller model:
+   ```python
+   WhisperModel("tiny", device="cpu", compute_type="int8")
+   ```
+
+2. **Audio File Too Long**
+   
+   **Solution:** 
+   - Keep audio under 5 minutes
+   - Use smaller Whisper model
+   - Upgrade Pipedream plan
+
+3. **Out of Memory**
+   
+   **Solution:**
+   - Use smaller model (tiny instead of base)
+   - Upgrade to higher memory tier
+
+### "Configuration Error: BOT_TOKEN not set"
+
+**Symptom:** This error in Pipedream logs.
+
+**Solutions:**
+
+1. **Add BOT_TOKEN:**
+   - Workflow → Settings (gear icon) → Environment Variables
+   - Add: Name = `BOT_TOKEN`, Value = your token
+   - Click Save
+   - Click "Deploy" to redeploy
+
+2. **Check spelling:**
+   - Must be exactly `BOT_TOKEN` (all caps, underscore)
+   - Not `bot_token` or `BOT TOKEN`
+
+3. **Redeploy:**
+   - After adding variable, click "Deploy"
+
+### Webhook Shows Errors in getWebhookInfo
+
+**Symptom:** `"last_error_message"` field appears in webhook info.
+
+**Common errors:**
+
+1. **"Wrong response from the webhook: 500 Internal Server Error"**
+   - Your code has an error
+   - Check Pipedream logs for details
+   - Fix the error and redeploy
+
+2. **"Connection timed out"**
+   - Your workflow took too long to respond
+   - Optimize code or upgrade plan
+
+3. **"Bad Request: invalid webhook URL"**
+   - URL is malformed
+   - Make sure you copied the full Pipedream URL
+   - Reset webhook with correct URL
+
+### "Empty webhook body" in Logs
+
+**Symptom:** Logs show "Empty body" message.
+
+**Cause:** The trigger received a request with no data.
+
+**Solutions:**
+- Ignore these - they're often from bots/scanners
+- Telegram's real requests always have data
+- Only worry if ALL requests show this
+
+### Persistent Issues
+
+If none of the above helps:
+
+1. **Check Dependencies:**
+   - Workflow → Code Step → Packages
+   - Verify all three packages are listed:
+     - python-telegram-bot
+     - yt-dlp  
+     - faster-whisper
+
+2. **Re-paste Code:**
+   - Maybe code didn't paste completely
+   - Delete all code in editor
+   - Re-paste from `pipedream_handler.py`
+
+3. **Create New Workflow:**
+   - Sometimes starting fresh helps
+   - Create a new workflow
+   - Follow all steps again
+
+4. **Check Pipedream Status:**
+   - Visit: https://pipedream.com/status
+   - Ensure no ongoing incidents
+
+5. **Ask for Help:**
+   - Pipedream Community: https://pipedream.com/community
+   - Include:
+     - Error message from logs
+     - What you've tried
+     - Screenshots (without exposing token)
+
+---
+
+## Maintenance and Updates
+
+### Updating Your Bot Code
+
+**When you need to update:**
+- Fix a bug
+- Add new features
+- Change bot behavior
+
+**How to update:**
+
+1. **Edit the code:**
+   - Go to your workflow in Pipedream
+   - Click on the Python code step
+   - Make your changes in the editor
+
+2. **Test changes (optional):**
+   - Use the "Test" button if available
+   - Or deploy and test with real messages
+
+3. **Deploy:**
+   - Click "Deploy" to activate changes
+   - Old code is replaced immediately
+
+4. **Verify:**
+   - Send a test message
+   - Check logs to confirm new code is running
+
+### Monitoring Usage
+
+**Check Credit Usage:**
+
+1. Go to your [Pipedream account settings](https://pipedream.com/settings/billing)
+2. See "Usage" or "Credits"
+3. View current month's consumption
+
+**Typical consumption:**
+- Simple message (like /start): ~1-2 credits
+- YouTube download (5-min video): ~10-20 credits
+- Transcription (2-min audio): ~20-30 credits
+
+**Free tier:** 100,000 credits/month
+- ~5,000 simple messages
+- ~500 YouTube downloads
+- ~300 transcriptions
+
+### Viewing Execution History
+
+1. Go to workflow → Logs tab
+2. See all executions (last 30 days on free tier)
+3. Filter by date, status, duration
+4. Export logs if needed
+
+### Pause or Disable Bot
+
+**Temporary (keep configuration):**
+
+1. **Disable workflow:**
+   - Workflow → Settings → Disable
+   - Webhook stops processing requests
+   - Re-enable anytime
+
+2. **Or remove webhook:**
    ```bash
    curl "https://api.telegram.org/bot<TOKEN>/deleteWebhook"
    ```
+   - Bot stops responding
+   - Set webhook again to re-enable
 
-3. **Deploy new webhook version** (follow deployment steps above)
+**Permanent:**
+- Delete workflow in Pipedream
+- Revoke bot token with BotFather (`/revoke`)
 
-4. **Test thoroughly:**
-   - Verify all commands work
-   - Test error scenarios
-   - Monitor for issues
+### Backup Your Workflow
+
+**Export code:**
+1. Copy code from Python step
+2. Save to local file
+3. Store environment variables separately (in password manager)
+
+**Recreate if needed:**
+- Create new workflow
+- Paste code
+- Add environment variables
+- Deploy
+
+---
+
+## Cost and Usage
+
+### Pipedream Free Tier
+
+**What you get:**
+- ✅ 100,000 credits/month
+- ✅ 30-day log retention
+- ✅ 1 concurrent execution per workflow
+- ✅ 30 second execution timeout
+- ✅ 512 MB memory
+- ✅ No credit card required
+
+**What it costs:**
+- **$0** for moderate usage
+- Most personal bots stay well within free tier
+
+### Understanding Credits
+
+Each workflow execution consumes credits based on:
+- **Execution time:** Longer = more credits
+- **Memory used:** More memory = more credits
+- **Number of steps:** More steps = more credits
+
+**Approximate costs:**
+
+| Action | Duration | Credits |
+|--------|----------|---------|
+| /start command | 0.5s | 1-2 |
+| Simple text message | 0.5s | 1-2 |
+| YouTube download (5 min) | 15-20s | 10-20 |
+| Audio transcription (2 min) | 10-15s | 20-30 |
+| Voice message transcription | 5-10s | 10-20 |
+
+**Example monthly usage:**
+- 100 /start commands = 200 credits
+- 50 YouTube downloads = 750 credits
+- 100 transcriptions = 2,500 credits
+- **Total: ~3,500 credits/month**
+- **Well within the 100,000 free credits! ✅**
+
+### When You Might Need to Upgrade
+
+**Paid plans start at $20/month** and include:
+- 200,000+ credits
+- Longer execution timeouts (up to 5 minutes)
+- More memory
+- 90-day log retention
+- Priority support
+
+**You might need paid plan if:**
+- Processing very long videos (10+ minutes)
+- High volume (1000+ messages/day)
+- Long audio transcriptions (10+ minutes)
+- Complex processing that takes time
+
+**For most users:** Free tier is plenty! 🎉
+
+### Optimizing Credit Usage
+
+**Tips to stay in free tier:**
+
+1. **Efficient error handling:**
+   - Return errors quickly
+   - Don't retry failed operations automatically
+
+2. **Smaller Whisper model:**
+   - Use `tiny` instead of `base`
+   - Faster = fewer credits
+
+3. **Set limits:**
+   - Reject files over certain size
+   - Limit video length
+
+4. **Monitor usage:**
+   - Check Pipedream billing page monthly
+   - See which operations use most credits
+
+---
+
+## Advanced Configuration
+
+### Using Pipedream Data Stores
+
+Pipedream offers key-value storage for persistence across executions.
+
+**Use case:** Track user preferences, rate limiting, statistics.
+
+**Example:**
+```python
+# In your handler code
+def handler(pd: "pipedream"):
+    # Store data
+    pd.flow.set("user_123_count", 5)
+    
+    # Retrieve data
+    count = pd.flow.get("user_123_count", default=0)
+    
+    # Increment
+    pd.flow.set("user_123_count", count + 1)
+```
+
+**Limitations:**
+- Free tier: 10,000 keys per account
+- Each key: up to 1 KB
+- Use for small data only
+
+### Custom Webhook Validation
+
+Add security by validating requests are from Telegram:
+
+**Option 1: IP Whitelist** (check Telegram's IP ranges)
+
+**Option 2: Secret Token** (Telegram Bot API 6.0+)
+```python
+# When setting webhook, add secret token:
+# setWebhook?url=...&secret_token=YOUR_SECRET
+
+# In handler, verify:
+secret = pd.steps["trigger"]["headers"]["X-Telegram-Bot-Api-Secret-Token"]
+if secret != os.environ.get("WEBHOOK_SECRET"):
+    return {"statusCode": 403, "body": "Forbidden"}
+```
+
+### Using External Databases
+
+For complex bots, use external database:
+
+**Options:**
+- PostgreSQL (Heroku, Railway, Supabase)
+- MongoDB (MongoDB Atlas)
+- Redis (Redis Cloud)
+
+**Add to code:**
+```python
+import os
+import psycopg2
+
+# In handler
+conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
+# Use database...
+```
+
+**Add connection string to environment variables:**
+- Name: `DATABASE_URL`
+- Value: `postgresql://user:pass@host/db`
+
+### Multiple Bots on One Account
+
+You can run multiple bot workflows:
+
+1. Create separate workflow for each bot
+2. Each gets its own webhook URL
+3. Each has its own BOT_TOKEN environment variable
+4. Credits shared across all workflows
+
+### Using Different Whisper Models
+
+Edit the code to change transcription accuracy/speed:
+
+**In `pipedream_handler.py`, find:**
+```python
+WhisperModel("base", device="cpu", compute_type="int8")
+```
+
+**Change to:**
+```python
+# Faster, less accurate:
+WhisperModel("tiny", device="cpu", compute_type="int8")
+
+# Slower, more accurate:
+WhisperModel("small", device="cpu", compute_type="int8")
+```
+
+**Model comparison:**
+
+| Model | Size | Speed | Accuracy | Best For |
+|-------|------|-------|----------|----------|
+| tiny | 75 MB | Fastest | Lower | Quick responses, clear audio |
+| base | 150 MB | Fast | Good | **Default - balanced** |
+| small | 500 MB | Medium | Better | High accuracy needs |
+| medium | 1.5 GB | Slow | High | Professional use |
+| large | 3 GB | Slowest | Best | Maximum accuracy |
+
+**Note:** Larger models may timeout on free tier.
+
+### Custom Download Options
+
+Modify YouTube download behavior:
+
+**In `pipedream_handler.py`, find `ydl_opts` and customize:**
+
+```python
+ydl_opts = {
+    'format': 'bestaudio/best',
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '128',  # Lower for smaller files
+    }],
+    'outtmpl': str(self.temp_dir / '%(title)s.%(ext)s'),
+    'quiet': True,
+    'no_warnings': True,
+    'max_filesize': 50 * 1024 * 1024,  # 50 MB max
+}
+```
+
+---
+
+## Migration from Polling
+
+If you're switching from a polling bot (like `main.py`):
+
+### Steps to Migrate
+
+**1. Stop the old bot:**
+- If running on Replit/VPS, stop the process
+- Close the terminal/tab running `python main.py`
+
+**2. Remove old webhook (if any):**
+```bash
+curl "https://api.telegram.org/bot<TOKEN>/deleteWebhook"
+```
+
+**3. Wait 5 seconds**
+- Ensure old bot is completely stopped
+
+**4. Deploy Pipedream webhook** (follow this guide)
+
+**5. Set new webhook:**
+```bash
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<PIPEDREAM_URL>"
+```
+
+**6. Test thoroughly:**
+- Send /start
+- Try all features
+- Monitor logs for errors
+
+### Data Migration
+
+**If you used the SQLite database:**
+- Database (`bot_data.db`) only exists in polling version
+- Webhook version doesn't persist database between runs
+- Options:
+  1. **Start fresh** (simplest)
+  2. **Use Pipedream Data Stores** for key data
+  3. **Use external database** (PostgreSQL, etc.)
+
+### Differences to Note
+
+| Feature | Polling (main.py) | Webhook (Pipedream) |
+|---------|-------------------|---------------------|
+| Database | SQLite, persists | Not persistent |
+| Settings | Saved per-chat | Simplified |
+| Keep-alive | Flask server | Not needed |
+| Scaling | Manual | Automatic |
+| Logs | stdout/file | Pipedream UI |
+| Cost | Server costs | Free tier/credits |
+
+---
 
 ## Support and Resources
 
-- [Pipedream Documentation](https://pipedream.com/docs)
-- [Telegram Bot API](https://core.telegram.org/bots/api)
-- [python-telegram-bot Documentation](https://python-telegram-bot.readthedocs.io/)
-- [yt-dlp Documentation](https://github.com/yt-dlp/yt-dlp)
-- [faster-whisper Documentation](https://github.com/guillaumekln/faster-whisper)
+### Official Documentation
 
-## Example: Setting Up Webhook
+- **Pipedream:** https://pipedream.com/docs
+- **Telegram Bot API:** https://core.telegram.org/bots/api
+- **python-telegram-bot:** https://python-telegram-bot.readthedocs.io/
+- **yt-dlp:** https://github.com/yt-dlp/yt-dlp
+- **faster-whisper:** https://github.com/guillaumekln/faster-whisper
 
+### Getting Help
+
+**Pipedream Community:**
+- Forum: https://pipedream.com/community
+- Discord: https://pipedream.com/support
+
+**This Repository:**
+- Check other documentation files:
+  - [QUICKSTART_PIPEDREAM.md](QUICKSTART_PIPEDREAM.md) - 5-minute quick start
+  - [POLLING_VS_WEBHOOK.md](POLLING_VS_WEBHOOK.md) - Comparison guide
+  - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical details
+
+**Telegram Bot Help:**
+- @BotFather - Bot management
+- @BotSupport - Official support channel
+
+### Common Questions
+
+**Q: Can I use a custom domain for the webhook?**
+A: Yes, Pipedream paid plans support custom domains. Free tier uses `*.m.pipedream.net`.
+
+**Q: How do I know if I'm running out of credits?**
+A: Check https://pipedream.com/settings/billing - it shows current month usage and sends email alerts.
+
+**Q: Can I run multiple bots?**
+A: Yes! Create separate workflows for each bot, each with its own BOT_TOKEN.
+
+**Q: Is my bot token secure?**
+A: Yes - Pipedream encrypts environment variables. Never commit tokens to GitHub.
+
+**Q: Can I download the bot code to run locally later?**
+A: Yes! The code in `pipedream_handler.py` can be adapted for other serverless platforms or local use.
+
+**Q: What happens if I exceed free tier?**
+A: Workflows stop executing until next month or you upgrade. No surprise charges.
+
+**Q: Can I see who uses my bot?**
+A: Yes - check Pipedream logs. Each message shows the user/chat ID.
+
+**Q: How do I delete my bot?**
+A: Tell @BotFather: `/deletebot` and select your bot. Also delete the Pipedream workflow.
+
+---
+
+## Quick Reference
+
+### Essential Commands
+
+**Check webhook status:**
 ```bash
-# 1. Get your Pipedream webhook URL
-PIPEDREAM_URL="https://eo123abc.m.pipedream.net"
-
-# 2. Get your bot token
-BOT_TOKEN="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-
-# 3. Set webhook
-curl "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${PIPEDREAM_URL}"
-
-# Expected response:
-# {"ok":true,"result":true,"description":"Webhook was set"}
-
-# 4. Verify webhook
-curl "https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo"
-
-# Expected response should show your URL and pending_update_count: 0
+curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 ```
 
-## Troubleshooting Checklist
+**Set webhook:**
+```bash
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<URL>"
+```
 
-- [ ] Bot token is correct and set in environment variables
-- [ ] Webhook URL is correct and accessible
-- [ ] Webhook is set with Telegram (check with getWebhookInfo)
-- [ ] Python dependencies are installed
-- [ ] FFmpeg is available (if using YouTube download)
-- [ ] Logs show incoming webhook requests
-- [ ] No other bot instance is polling
-- [ ] Temporary directory (/tmp) is writable
-- [ ] Execution time is within limits
+**Delete webhook:**
+```bash
+curl "https://api.telegram.org/bot<TOKEN>/deleteWebhook"
+```
 
-## Next Steps
+### Files in Repository
 
-After successful deployment:
-1. Monitor the bot for a few days
-2. Implement additional features as needed
-3. Set up proper logging and alerting
-4. Consider adding analytics
-5. Implement user feedback mechanism
+| File | Purpose |
+|------|---------|
+| `pipedream_handler.py` | **Main bot code for Pipedream** ← Use this! |
+| `pipedream_webhook.py` | Alternative implementation |
+| `main.py` | Polling version (not for Pipedream) |
+| `setup_webhook.sh` | Helper script to set webhook |
+| `requirements-pipedream.txt` | Python dependencies list |
+| `QUICKSTART_PIPEDREAM.md` | 5-minute quick start |
+| This file | Complete deployment guide |
+
+### Required Environment Variables
+
+| Name | Value | Where |
+|------|-------|-------|
+| `BOT_TOKEN` | Your Telegram bot token | Workflow → Settings → Environment Variables |
+
+### Required Python Packages
+
+Add in Pipedream code step → Packages:
+1. `python-telegram-bot` (version 20.0+)
+2. `yt-dlp`
+3. `faster-whisper`
+
+---
+
+## Conclusion
+
+**Congratulations! 🎉** 
+
+You now have a fully functional Telegram bot running on Pipedream with:
+- ✅ YouTube to MP3 conversion
+- ✅ Audio transcription
+- ✅ Serverless deployment
+- ✅ Automatic scaling
+- ✅ Real-time logging
+- ✅ Free hosting
+
+### Next Steps
+
+- **Customize:** Edit the code to add features
+- **Monitor:** Check logs regularly
+- **Share:** Give your bot to friends
+- **Expand:** Add more commands and functionality
+- **Learn:** Explore Pipedream's other features
+
+### Feedback
+
+Found this guide helpful? Have suggestions? 
+- Star the repository
+- Open an issue for improvements
+- Contribute enhancements
+
+---
+
+**Happy bot building! 🤖🚀**
